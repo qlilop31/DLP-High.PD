@@ -62,48 +62,47 @@ class DLPServer
 					Concurrency::streams::stringstream::
 					open_istream(tmp_stream_buffer2.collection()); 
 
-				// òîëüêî äàííûé êëàññ, async_iostream, ïîçâîëÿåò ðàáîòàòü êàê ñ ïðèâû÷íûìè âàì std-ïîòîêàìè,
-				// íî àñèíõðîííî, ñîâìåñòíî ñ â îáùåì àñèíõðîííîì àïïàðàòå cpprestsdk
+				// только данный класс, async_iostream, позволяет работать как с привычными вам std-потоками,
+				// но асинхронно, совместно с в общем асинхронном аппарате cpprestsdk
 				Concurrency::streams::async_istream<char>
 					async_inout_stream2(intermediate_async_stream2.streambuf());
 
-				async_inout_stream2 >> second_name; // "Èâàíîâ"
+				async_inout_stream2 >> second_name; // "Иванов"
 
-				/* ïðèìåð ÷òåíèÿ îñòàâøåãîñÿ ñîäåðæèìîãî ôàéëà â áóôåð è ïîñëåäóþùåé ðàáîòû ñ íèì ÷åðåç ïîòîêè,
-				ïåðâîèñòî÷íèê: cpprestsdk/Release/tests/functional/streams/stdstream_tests.cpp*/
+				/* пример чтения оставшегося содержимого файла в буфер и последующей работы с ним через потоки,
+				первоисточник: cpprestsdk/Release/tests/functional/streams/stdstream_tests.cpp*/
 
-				concurrency::streams::stringstreambuf tmp_stream_buffer; // àñèíõðîííûé áóôåð äëÿ ðàáîòû ñ ñîäåðæèìûì ôàéëà 
+				concurrency::streams::stringstreambuf tmp_stream_buffer; // асинхронный буфер для работы с содержимым файла
 
-				fileIStream.read_to_end(tmp_stream_buffer).get(); // ñ÷èòûâàíèå ñîäåðæèìîãî ôàéëà â áóôåð
+				fileIStream.read_to_end(tmp_stream_buffer).get(); // считывание содержимого файла в буфер
 
-				// ÷òîáû ðàáîòàòü ñ async_iostream (ñì. íèæå) íóæåí äàííûé ïðîìåæóòî÷íûé ñòðèì
+				// чтобы работать с async_iostream (см. ниже) нужен данный промежуточный стрим
 				auto intermediate_async_stream =
 					Concurrency::streams::stringstream::
 					open_istream(tmp_stream_buffer.collection()); 
 
-				// òîëüêî äàííûé êëàññ, async_iostream, ïîçâîëÿåò ðàáîòàòü êàê ñ ïðèâû÷íûìè âàì std-ïîòîêàìè,
-				// íî àñèíõðîííî, ñîâìåñòíî ñ â îáùåì àñèíõðîííîì àïïàðàòå cpprestsdk
+				// только данный класс, async_iostream, позволяет работать как с привычными вам std-потоками,
+				// но асинхронно, совместно с в общем асинхронном аппарате cpprestsdk
 				Concurrency::streams::async_istream<char>
 					async_inout_stream(intermediate_async_stream.streambuf());
 
-				async_inout_stream >> first_name >> patronymic; // "Èâàí" "Èâàíîâè÷"
+				async_inout_stream >> first_name >> patronymic; // "Иван" "Иванович"
 
 				fileIStream.close();
 
-				/* âûâîä â ôàéë (ïî ïðèìåðàì ñ https://casablanca.codeplex.com/wikipage?title=Asynchronous%20Streams,
+				/* вывод в файл (по примерам с https://casablanca.codeplex.com/wikipage?title=Asynchronous%20Streams,
 				https://github.com/Microsoft/cpprestsdk/wiki/Getting-Started-Tutorial) */
 
 				concurrency::streams::ostream fileOStream =
 					concurrency::streams::file_stream<uint8_t>::
 					open_ostream(U("DataBase.txt")).get();
 
-				// ñâÿçàòü ôàéëîâûé ïîòîê ñ ïîòîêîì ââîäà/âûâîäà
+				// связать файловый поток с потоком ввода/вывода
 				Concurrency::streams::async_ostream<char>
 					async_inout_stream3(fileOStream.streambuf());
 
-				async_inout_stream3 << second_name << ' ' << first_name << ' ' << patronymic << "\r\n"; // çàïèñü äàííûõ, ñ÷èòàííûõ èç èçíà÷àëüíîãî ôàéëà
-				async_inout_stream3 << "Ïåòðîâ" << ' ' << "Ï¸òð" << ' ' << "Ïåòðîâè÷" << "\r\n"; // çàïèñü íîâîé ñòðî÷êè
-
+				async_inout_stream3 << second_name << ' ' << first_name << ' ' << patronymic << "\r\n"; // запись данных, считанных из изначального файла
+				async_inout_stream3 << "Ïåòðîâ" << ' ' << "Ï¸òð" << ' ' << "Ïåòðîâè÷" << "\r\n"; // запись новой строчки
 				fileOStream.close();
 
 			}
@@ -123,12 +122,12 @@ class DLPServer
 		concurrency::streams::container_buffer<std::string> async_string_buffer;
 		//concurrency::streams::stdio_istream<char> abc;
 		// 
-		//concurrency::streams::basic_istream<char> async_input_stream();// async_string_buffer.create_istream());// ïðîìåæóòî÷íûé àñèíõðîííûé ïîòîê ââîäà
-		//std::basic_istream<char> standard_istream;// ñòàíäàðòíûé ïîòîê ââîäà äëÿ ñîâìåñòèìîñòè ñ âàøèì ïðèëîæåíèåì
-		//concurrency::streams::basic_ostream<char> async_output_stream;// ïðîìåæóòî÷íûé àñèíõðîííûé ïîòîê âûâîäà
-		//std::basic_ostream<char> standard_ostream;// ñòàíäàðòíûé ïîòîê âûâîäà äëÿ ñîâìåñòèìîñòè ñ âàøèì ïðèëîæåíèåì
+		//concurrency::streams::basic_istream<char> async_input_stream();// async_string_buffer.create_istream());// промежуточный асинхронный поток ввода
+		//std::basic_istream<char> standard_istream;// стандартный поток ввода для совместимости с вашим приложением
+		//concurrency::streams::basic_ostream<char> async_output_stream;// промежуточный асинхронный поток вывода
+		//std::basic_ostream<char> standard_ostream;// стандартный поток вывода для совместимости с вашим приложением
 
-		void handle_get(web::http::http_request message) // http_request ïðèõîäèò îò êëèåíòà
+		void handle_get(web::http::http_request message) // http_request приходит от клиента
 		{
 
 			std::wcout << U("GET request") << std::endl;
@@ -169,7 +168,7 @@ class DLPServer
 			/*std::wcout << L"Ïîëó÷åí çàïðîñ GET" << std::endl;
 			message.reply(status_codes::OK)
 				.then([](pplx::task<void> t) {
-				std::wcout << L"Îòïðàâëåí îòâåò êëèåíòó" << std::endl;
+				std::wcout << "Отправлен ответ клиенту" << std::endl;
 			});*/
 		}
 
@@ -187,17 +186,17 @@ class DLPServer
 					{
 						
 						//std::wstring tmp = jsonValue.serialize();
-						//std::wcout << jsonValue.serialize() << std::endl;// âûâîäèò json-çàïèñü â ñòðîêå, íå ðàçáèðàÿ å¸
+						//std::wcout << jsonValue.serialize() << std::endl;// выводит json-запись в строке, не разбирая её
 						std::wcout << jsonValue.at(U("password")).serialize() << std::endl;
 						std::wcout << jsonValue.at(U("login")).serialize() << std::endl;
 						std::wcout << jsonValue.at(U("captcha")).serialize() << std::endl;
 						
-						std::string line = async_string_buffer.collection();//ïåðåäàòü ñîäåðæèìîå âñåãî ôàéëà (÷åðåç áóôåð) â ñòðîêó
+						std::string line = async_string_buffer.collection();//передать содержимое всего файла (через буфер) в строку
 
 						std::wstring wline = std::wstring(async_string_buffer.collection().begin(),
-							async_string_buffer.collection().end()); // ïðåîáðàçîâàíèå â 16-áèòíóþ ñòðîêó
+							async_string_buffer.collection().end()); // преобразование в 16-битную строку
 
-						json::value replyData; // îáúåêò json-çàïèñè, çàòåì - çàïîëíÿåòñÿ ïåðåìåííûìè
+						json::value replyData; // объект json-записи, затем - заполняется переменными
 						replyData[U("string")] = json::value::string(wline);
 
 
@@ -206,7 +205,7 @@ class DLPServer
 						response.set_status_code(status_codes::OK);
 						response.set_body(replyData);
 
-						message.reply(response).wait();// çàïóñê ïîòîêà (öåïî÷êè task ïî îòïðàâêå response îáðàòíî êëèåíòó)
+						message.reply(response).wait();// запуск потока (цепочки task по отправке response обратно клиенту)
 						
 						
 					});
@@ -215,20 +214,20 @@ class DLPServer
 				{
 					std::wcout << e.what() << std::endl;
 				}
-				// åñëè äàííîãî ïîëüçîâàòåëÿ ìîæíî çàðåãèñòðèðîâàòü â ñèñòåìå - ðåãèñòðàöèÿ
-				// åñëè íåò - ñîîáùåíèå îá îòêëîí¸ííîé ðåãèñòðàöèè
+				// если данного пользователя можно зарегистрировать в системе - регистрация
+				// если нет - сообщение об отклонённой регистрации
 			}
 			else if (message.request_uri() == U("/dlpapi/auth"))
 			{
 				std::wcout << L"Authentification request" << std::endl;
-				// åñëè ïîëüçîâàòåëü çàðåãèñòðèðîâàí ñ äàííîé ïàðîé ëîãèí-ïàðîëü - âûäàòü åìó òîêåí
-				// åñëè â äàííàÿ ïàðà ëîãèí-ïàðîëü îòñóòñòâóåò â ñèñòåìå - 
+				// если пользователь зарегистрирован с данной парой логин-пароль - выдать ему токен
+				// если в данная пара логин-пароль отсутствует в системе -
 			}
 			else if (message.request_uri() == U("/dlpapi/access"))
 			{
 				std::wcout << L"Database request access" << std::endl;
-				// åñëè ïîëüçîâàòåëü àóòåíòèôèöèðîâàí - âûäàòü åìó çàïðîøåííûå äàííûå
-				// åñëè ïîëüçîâàåëü íå èçâåñòåí - 
+				// если пользователь аутентифицирован - выдать ему запрошенные данные
+				// если пользоваель не известен -
 
 			}
 			else
@@ -244,8 +243,8 @@ class DLPServer
 
 			
 			//async_string_buffer.close();
-			// çàïèñü èçìåíåíèé
-			//fileStream.close(); // çàêðûòèå ôàéëà
+			// запись изменений
+			//fileStream.close(); // закрытие файла
 
 		}
 };
